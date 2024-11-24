@@ -2,20 +2,16 @@ import { Input } from 'antd';
 import type { TextAreaRef } from 'antd/es/input/TextArea';
 import React, { useEffect, useRef, useState } from 'react';
 
-export default function Hello() {
-    const textAreaRef = useRef<TextAreaRef>(null);
+function useIsOverflow<T extends HTMLElement>(elementRef: React.RefObject<T>) {
     const [isOverflowing, setIsOverflowing] = useState(false);
 
     const checkOverflow = () => {
-        // 注意：这里必须通过resizableTextArea.textArea来获取真实的textarea DOM元素
-        // 因为antd的TextArea是一个包装组件，我们需要获取内部的原生textarea
-        const textarea = textAreaRef.current?.resizableTextArea?.textArea;
-        if (textarea) {
-            // 当内容超出maxRows限制时，scrollHeight会大于offsetHeight
-            const isTextOverflowing = textarea.scrollHeight > textarea.offsetHeight;
+        const element = elementRef.current;
+        if (element) {
+            const isTextOverflowing = element.scrollHeight > element.offsetHeight;
             console.log('Checking overflow:', {
-                scrollHeight: textarea.scrollHeight,
-                offsetHeight: textarea.offsetHeight,
+                scrollHeight: element.scrollHeight,
+                offsetHeight: element.offsetHeight,
                 isOverflowing: isTextOverflowing
             });
             setIsOverflowing(isTextOverflowing);
@@ -23,6 +19,34 @@ export default function Hello() {
     };
 
     useEffect(checkOverflow, []);
+
+    return {
+        isOverflowing,
+        checkOverflow
+    };
+}
+
+function useAntdTextArea() {
+    const textAreaRef = useRef<TextAreaRef>(null);
+    const textAreaElementRef = useRef<HTMLTextAreaElement | null>(null);
+
+    useEffect(() => {
+        // 更新原生textarea元素的引用
+        const textArea = textAreaRef.current?.resizableTextArea?.textArea ?? null;
+        if (textArea !== textAreaElementRef.current) {
+            textAreaElementRef.current = textArea;
+        }
+    }, [textAreaRef]);
+
+    return {
+        textAreaRef,
+        textAreaElementRef
+    };
+}
+
+export default function Hello() {
+    const { textAreaRef, textAreaElementRef } = useAntdTextArea();
+    const { isOverflowing, checkOverflow } = useIsOverflow(textAreaElementRef);
 
     return (
         <div style={{ padding: 20 }}>
